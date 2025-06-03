@@ -1,1 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="header">
+        <h1>Translator</h1>
+    </div>
 
+    <div class="main-wrapper">
+        <!-- ... API 配置等保持不变 ... -->
+        <details class="api-config-details">
+            <summary>API 配置 (点击展开/折叠)</summary>
+            <div class="api-config-content">
+                <div class="form-group">
+                    <label for="api_platform">API 平台:</label>
+                    <select id="api_platform">
+                        <option value="custom">自定义 (Custom)</option>
+                        <option value="siliconflow" selected>SiliconFlow</option>
+                        <option value="Modelscope">Modelscope</option>
+                        <option value="Openrouter">Openrouter</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="ollama">Ollama</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="base_url">API Base URL:</label>
+                    <input type="text" id="base_url" placeholder="例如: https://api.siliconflow.cn/v1">
+                    <p class="hint">留空将使用 .env 默认值或平台预设。</p>
+                </div>
+                <div class="form-group">
+                    <label for="api_key">API 密钥 (API Key):</label>
+                    <input type="password" id="api_key" placeholder="例如: sk-xxxx">
+                    <p class="hint">留空将使用 .env 环境变量 (例如 SILICONFLOW_API_KEY)。</p>
+                </div>
+                <div class="form-group">
+                    <label for="model">模型 (Model):</label>
+                    <input type="text" id="model" placeholder="例如: Qwen/Qwen2-7B-Instruct">
+                    <p class="hint">留空将使用 .env 默认值或平台预设。</p>
+                </div>
+            </div>
+        </details>
+
+        <div class="language-selection-bar">
+            <select id="source_lang" class="lang-select"></select>
+            <button id="swap_lang_button" class="swap-button" title="互换源语言与目标语言">
+                <i class="fas fa-exchange-alt"></i>
+            </button>
+            <select id="target_lang" class="lang-select" required></select>
+        </div>
+
+        <div class="translation-container">
+            <div class="input-panel">
+                <div class="mode-toggle-buttons">
+                    <button id="mode_text_button" class="mode-button active">文字</button>
+                    <button id="mode_file_button" class="mode-button">文档</button>
+                </div>
+
+                <div id="text_input_section" class="input-content active">
+                    <!-- ================================================== -->
+                    <!-- >>>>>>>>>> START OF ADDED SECTION FOR TEXT INPUT <<<<<<<<<< -->
+                    <div class="input-header"> <!-- 新增：用于放置输入框的按钮 -->
+                        <button id="copy_source_text_button" class="small-icon-button" title="复制原文">
+                            <i class="fas fa-copy"></i> 
+                        </button>
+                        <button id="clear_source_text_button" class="small-icon-button clear-button" title="清除原文">
+                            <i class="fas fa-times-circle"></i> 
+                        </button>
+                    </div>
+                    <!-- <<<<<<<<<< END OF ADDED SECTION FOR TEXT INPUT <<<<<<<<<< -->
+                    <!-- ================================================== -->
+                    <textarea id="text_input" placeholder="在此输入文字..."></textarea>
+                </div>
+
+                <div id="file_input_section" class="input-content">
+                    <!-- ... 文件输入部分保持不变 ... -->
+                    <div class="file-upload-area">
+                        <label for="file_input" class="upload-button">
+                            <i class="fas fa-file-upload"></i> 选择文档 (.txt, .docx)
+                            <input type="file" id="file_input" accept=".txt,.docx" hidden>
+                        </label>
+                        <span id="file_name_display" class="file-name-display">未选择任何文档</span>
+                    </div>
+                    
+                    <div class="form-group" id="translation_format_group" style="display: none;">
+                        <label>翻译格式 (.docx):</label>
+                        <div>
+                            <input type="radio" id="format_unformatted" name="translation_format" value="unformatted" checked>
+                            <label for="format_unformatted" class="radio-label">不带格式翻译 (纯文本)</label>
+                        </div>
+                        <div>
+                            <input type="radio" id="format_formatted" name="translation_format" value="formatted">
+                            <label for="format_formatted" class="radio-label">带格式翻译 (保留样式)</label>
+                        </div>
+                         <p class="hint">仅对 .docx 文档有效。"带格式翻译"会尝试保留原始文档的字体、颜色、排版等样式。</p>
+                    </div>
+
+                    <div class="form-group" id="encoding_group" style="display: none;">
+                        <label for="encoding">文件编码 (.txt):</label>
+                        <input type="text" id="encoding" value="utf-8" placeholder="例如: utf-8, gbk">
+                        <p class="hint">仅对 .txt 文档有效。</p>
+                    </div>
+                    
+                    <div class="form-group file-output-path" style="display: none;"> 
+                        <label for="output_folder_path">翻译文件保存路径 (服务器端):</label>
+                        <div class="path-input-group">
+                            <input type="text" id="output_folder_path" placeholder="例如: /var/www/translated_docs 或 D:\translated_docs">
+                            <button type="button" id="copy_default_path_button" class="small-button" title="复制默认下载目录路径">
+                                <i class="fas fa-clipboard"></i> 复制默认路径
+                            </button>
+                        </div>
+                        <p class="hint">文件将保存在服务器上的此路径，并从默认下载目录提供下载。</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="translate-button-container">
+                <button id="translate_button" class="central-translate-button" title="开始翻译">
+                    <i class="fas fa-language"></i>
+                </button>
+            </div>
+            
+            <div class="output-panel">
+                <div class="output-header">
+                    <button id="copy_translated_text_button" class="small-icon-button" title="复制翻译结果">
+                        <i class="fas fa-copy"></i> 复制
+                    </button>
+                </div>
+                <textarea id="translated_text_display" placeholder="翻译结果将显示在此..." readonly></textarea>
+                <div id="download_area" class="download-area" style="display: none;">
+                    <a id="download_link" href="#" style="display: none;">下载翻译文件</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-log-area">
+            <div id="status_message" class="status-message"></div>
+            <div class="log-box">
+                <h3>操作日志</h3>
+                <pre id="log_output"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
